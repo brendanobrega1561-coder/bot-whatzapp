@@ -1,0 +1,38 @@
+const { Client, MessageMedia } = require('whatsapp-web.js');
+const qrcode = require('qrcode-terminal');
+const ytdl = require('ytdl-core');
+const fs = require('fs');
+
+const client = new Client();
+
+client.on('qr', qr => {
+    qrcode.generate(qr, { small: true });
+});
+
+client.on('ready', () => {
+    console.log('🎧 Deadpool Music Bot online!');
+});
+
+client.on('message', async message => {
+    if (message.body.startsWith('!play')) {
+        const url = message.body.split(' ')[1];
+
+        if (!ytdl.validateURL(url)) {
+            message.reply('❌ Manda um link válido do YouTube!');
+            return;
+        }
+
+        const stream = ytdl(url, { filter: 'audioonly' });
+        const file = 'musica.mp3';
+
+        const writeStream = fs.createWriteStream(file);
+        stream.pipe(writeStream);
+
+        writeStream.on('finish', async () => {
+            const media = MessageMedia.fromFilePath(file);
+            await client.sendMessage(message.from, media, { sendAudioAsVoice: true });
+        });
+    }
+});
+
+client.initialize();
